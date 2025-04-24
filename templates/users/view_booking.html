@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="mb-4">
+        <a href="{{ url_for('user_bookings') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i> Back to Bookings
+        </a>
+    </div>
+    
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Booking Details: {{ booking.booking_number }}</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="card-title">Parking Information</h5>
+                    <table class="table">
+                        <tr>
+                            <th>Parking Lot:</th>
+                            <td>{{ booking.space.parking_lot.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Address:</th>
+                            <td>{{ booking.space.parking_lot.address }}</td>
+                        </tr>
+                        <tr>
+                            <th>Space Number:</th>
+                            <td>{{ booking.space.space_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>Vehicle:</th>
+                            <td>{{ booking.vehicle.vehicle_number }} ({{ booking.vehicle.model }})</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="card-title">Booking Information</h5>
+                    <table class="table">
+                        <tr>
+                            <th>Start Time:</th>
+                            <td>{{ booking.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                        </tr>
+                        <tr>
+                            <th>End Time:</th>
+                            <td>{{ booking.end_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Duration:</th>
+                            <td>{{ "%.2f"|format(booking.duration_hours) }} hours</td>
+                        </tr>
+                        <tr>
+                            <th>Hourly Rate:</th>
+                            <td>₹{{ "%.2f"|format(booking.space.parking_lot.hourly_rate) }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <h5 class="card-title">Status Information</h5>
+                    <table class="table">
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                {% if booking.status == 'active' %}
+                                    <span class="badge bg-success">Active</span>
+                                {% elif booking.status == 'completed' %}
+                                    <span class="badge bg-info">Completed</span>
+                                {% elif booking.status == 'cancelled' %}
+                                    <span class="badge bg-danger">Cancelled</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Payment Status:</th>
+                            <td>
+                                {% if booking.payment_status == 'paid' %}
+                                    <span class="badge bg-success">Paid</span>
+                                {% elif booking.payment_status == 'refunded' %}
+                                    <span class="badge bg-warning">Refunded</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Booking Date:</th>
+                            <td>{{ booking.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="card-title">Payment Information</h5>
+                    {% if booking.payment_info %}
+                        <table class="table">
+                            <tr>
+                                <th>Amount:</th>
+                                <td>₹{{ "%.2f"|format(booking.total_amount) }}</td>
+                            </tr>
+                            <tr>
+                                <th>Payment Method:</th>
+                                <td>{{ booking.payment_info.payment_method|capitalize }}</td>
+                            </tr>
+                            <tr>
+                                <th>Transaction ID:</th>
+                                <td>{{ booking.payment_info.transaction_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Payment Date:</th>
+                                <td>{{ booking.payment_info.payment_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                            </tr>
+                        </table>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            No payment information available.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Booking QR Code for entry/exit -->
+            <div class="row mt-4 justify-content-center">
+                <div class="col-md-6 text-center">
+                    <h5 class="card-title">Booking QR Code</h5>
+                    <div class="border p-3 mb-3">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ booking.booking_number }}" alt="Booking QR Code" class="img-fluid">
+                    </div>
+                    <p class="text-muted">Show this QR code at the parking entrance/exit</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-footer">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <a href="{{ url_for('book_parking') }}" class="btn btn-primary">
+                        <i class="fas fa-plus-circle me-2"></i> New Booking
+                    </a>
+                </div>
+                <div>
+                    {% if booking.status == 'active' and booking.start_time > now %}
+                        <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelBookingModal">
+                            <i class="fas fa-times-circle me-2"></i> Cancel Booking
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Booking Modal -->
+{% if booking.status == 'active' and booking.start_time > now %}
+    <div class="modal fade" id="cancelBookingModal" tabindex="-1" aria-labelledby="cancelBookingModalLabel" aria-
