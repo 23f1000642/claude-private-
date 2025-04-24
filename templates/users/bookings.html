@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">My Bookings</h1>
+    
+    <!-- Filter Tabs -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link {% if status == 'all' %}active{% endif %}" href="{{ url_for('user_bookings', status='all') }}">All Bookings</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status == 'active' %}active{% endif %}" href="{{ url_for('user_bookings', status='active') }}">Active</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status == 'completed' %}active{% endif %}" href="{{ url_for('user_bookings', status='completed') }}">Completed</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status == 'cancelled' %}active{% endif %}" href="{{ url_for('user_bookings', status='cancelled') }}">Cancelled</a>
+        </li>
+    </ul>
+    
+    <!-- Bookings Table -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            {% if bookings.items %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Booking #</th>
+                                <th>Location</th>
+                                <th>Vehicle</th>
+                                <th>Date & Time</th>
+                                <th>Duration</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in bookings.items %}
+                                <tr>
+                                    <td>{{ booking.booking_number }}</td>
+                                    <td>{{ booking.space.parking_lot.name }}</td>
+                                    <td>{{ booking.vehicle.vehicle_number }}</td>
+                                    <td>
+                                        <div>Start: {{ booking.start_time.strftime('%Y-%m-%d %H:%M') }}</div>
+                                        <div>End: {{ booking.end_time.strftime('%Y-%m-%d %H:%M') }}</div>
+                                    </td>
+                                    <td>{{ "%.2f"|format(booking.duration_hours) }} hours</td>
+                                    <td>₹{{ "%.2f"|format(booking.total_amount) }}</td>
+                                    <td>
+                                        {% if booking.status == 'active' %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% elif booking.status == 'completed' %}
+                                            <span class="badge bg-info">Completed</span>
+                                        {% elif booking.status == 'cancelled' %}
+                                            <span class="badge bg-danger">Cancelled</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('view_booking', id=booking.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        {% if bookings.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('user_bookings', status=status, page=bookings.prev_num) }}">Previous</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for page_num in bookings.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                            {% if page_num %}
+                                {% if bookings.page == page_num %}
+                                    <li class="page-item active">
+                                        <a class="page-link" href="{{ url_for('user_bookings', status=status, page=page_num) }}">{{ page_num }}</a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('user_bookings', status=status, page=page_num) }}">{{ page_num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#">...</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if bookings.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('user_bookings', status=status, page=bookings.next_num) }}">Next</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Next</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% else %}
+                <div class="alert alert-info">
+                    No bookings found.
+                    {% if status != 'all' %}
+                        <a href="{{ url_for('user_bookings', status='all') }}">View all bookings</a>.
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
