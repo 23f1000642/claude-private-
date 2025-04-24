@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="container-fluid p-0">
+    <div class="bg-primary text-white py-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h1 class="display-4 fw-bold">Find and Book Parking with Ease</h1>
+                    <p class="lead">Secure your parking spot in advance and save time. No more driving around looking for parking spaces.</p>
+                    <div class="mt-4">
+                        <a href="{{ url_for('search_parking') }}" class="btn btn-light btn-lg me-2">Find Parking</a>
+                        {% if not current_user.is_authenticated %}
+                            <a href="{{ url_for('register') }}" class="btn btn-outline-light btn-lg">Sign Up</a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-lg-6 d-none d-lg-block">
+                    <img src="{{ url_for('static', filename='images/parking_illustration.png') }}" alt="Parking Illustration" class="img-fluid rounded shadow">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search Section -->
+<div class="container my-5">
+    <div class="card shadow">
+        <div class="card-body">
+            <h3 class="card-title mb-4">Find Parking Near You</h3>
+            <form action="{{ url_for('search_parking') }}" method="get">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="searchQuery" name="query" placeholder="Enter location or parking name">
+                            <label for="searchQuery">Location or Parking Name</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="pinCode" name="pin_code" placeholder="Enter PIN Code">
+                            <label for="pinCode">PIN Code</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary h-100 w-100">
+                            <i class="fas fa-search me-2"></i> Search
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Featured Parking Lots -->
+<div class="container my-5">
+    <h2 class="text-center mb-4">Featured Parking Locations</h2>
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for lot in parking_lots %}
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ lot.name }}</h5>
+                        <p class="card-text">
+                            <i class="fas fa-map-marker-alt text-primary me-2"></i> {{ lot.address }}
+                        </p>
+                        <p class="card-text">
+                            <i class="fas fa-car text-primary me-2"></i> {{ lot.available_spaces_count() }} spaces available
+                        </p>
+                        <p class="card-text">
+                            <i class="fas fa-rupee-sign text-primary me-2"></i> {{ lot.hourly_rate }} per hour
+                        </p>
+                    </div>
+                    <div class="card-footer bg-white">
+                        <a href="{{ url_for('book_parking') }}?lot_id={{ lot.id }}" class="btn btn-primary w-100">Book Now</a>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    No parking lots available at the moment.
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- How It Works -->
+<div class="container my-5">
+    <h2 class="text-center mb-4">How It Works</h2>
+    <div class="row row-cols-1 row-cols-md-3 g-4 text-center">
+        <div class="col">
+            <div class="p-3">
+                <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3" style="width: 80px; height: 80px;">
+                    <i class="fas fa-search fa-2x"></i>
+                </div>
+                <h4>Search</h4>
+                <p>Find parking spots near your destination</p>
+            </div>
+        </div>
+        <div class="col">
+            <div class="p-3">
+                <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3" style="width: 80px; height: 80px;">
+                    <i class="fas fa-calendar-check fa-2x"></i>
+                </div>
+                <h4>Book</h4>
+                <p>Reserve your parking spot in advance</p>
+            </div>
+        </div>
+        <div class="col">
+            <div class="p-3">
+                <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3" style="width: 80px; height: 80px;">
+                    <i class="fas fa-car fa-2x"></i>
+                </div>
+                <h4>Park</h4>
+                <p>Enjoy hassle-free parking at your reserved spot</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Benefits Section -->
+<div class="container my-5">
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <h2>Why Choose Our Parking System?</h2>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item border-0">
+                    <i class="fas fa-check-circle text-primary me-2"></i> Convenient booking from anywhere
+                </li>
+                <li class="list-group-item border-0">
+                    <i class="fas fa-check-circle text-primary me-2"></i> Secure payment options
+                </li>
+                <li class="list-group-item border-0">
+                    <i class="fas fa-check-circle text-primary me-2"></i> Real-time availability updates
+                </li>
+                <li class="list-group-item border-0">
+                    <i class="fas fa-check-circle text-primary me-2"></i> Guaranteed parking spots
+                </li>
+                <li class="list-group-item border-0">
+                    <i class="fas fa-check-circle text-primary me-2"></i> 24/7 customer support
+                </li>
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <img src="{{ url_for('static', filename='images/benefits_illustration.png') }}" alt="Benefits" class="img-fluid rounded shadow">
+        </div>
+    </div>
+</div>
+{% endblock %}
