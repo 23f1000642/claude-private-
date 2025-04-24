@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .parking-space {
+        min-height: 200px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Book Parking</h1>
+    
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form id="bookingForm" method="POST" action="{{ url_for('confirm_booking') }}">
+                <div class="row">
+                    <!-- Step 1: Select Parking Lot -->
+                    <div class="col-md-6 mb-3">
+                        <label for="parking_lot_id" class="form-label">Parking Location</label>
+                        <select class="form-select" id="parking_lot_id" name="parking_lot_id" required>
+                            <option value="">Select a parking location</option>
+                            {% for lot in parking_lots %}
+                                <option value="{{ lot.id }}" data-rate="{{ lot.hourly_rate }}">{{ lot.name }} - {{ lot.address }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Step 2: Select Vehicle -->
+                    <div class="col-md-6 mb-3">
+                        <label for="vehicle_id" class="form-label">Your Vehicle</label>
+                        <select class="form-select" id="vehicle_id" name="vehicle_id" required>
+                            <option value="">Select your vehicle</option>
+                            {% for vehicle in vehicles %}
+                                <option value="{{ vehicle.id }}" data-type="{{ vehicle.vehicle_type }}">{{ vehicle.vehicle_number }} - {{ vehicle.model }} ({{ vehicle.vehicle_type }})</option>
+                            {% endfor %}
+                        </select>
+                        {% if not vehicles %}
+                            <div class="form-text text-danger">
+                                You don't have any vehicles registered. <a href="{{ url_for('add_vehicle') }}">Add a vehicle</a> first.
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Step 3: Select Date and Time -->
+                    <div class="col-md-6 mb-3">
+                        <label for="start_time" class="form-label">Start Time</label>
+                        <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="end_time" class="form-label">End Time</label>
+                        <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                    </div>
+                    
+                    <!-- Step 4: Select Space (will be populated via JavaScript) -->
+                    <div class="col-12 mb-3">
+                        <label for="parking_space_id" class="form-label">Parking Space</label>
+                        <select class="form-select" id="parking_space_id" name="parking_space_id" required disabled>
+                            <option value="">Select date/time and vehicle to see available spaces</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Booking Summary -->
+                    <div class="col-12 mt-3">
+                        <div class="card bg-light">
+                            <div class="card-header">
+                                <h5>Booking Summary</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Location:</strong> <span id="summary_location">Not selected</span></p>
+                                        <p><strong>Vehicle:</strong> <span id="summary_vehicle">Not selected</span></p>
+                                        <p><strong>Space Number:</strong> <span id="summary_space">Not selected</span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Start Time:</strong> <span id="summary_start">Not selected</span></p>
+                                        <p><strong>End Time:</strong> <span id="summary_end">Not selected</span></p>
+                                        <p><strong>Duration:</strong> <span id="summary_duration">0 hours</span></p>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Rate:</strong> ₹<span id="summary_rate">0.00</span> per hour</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p class="fw-bold fs-5">Total Amount: ₹<span id="summary_total">0.00</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div class="col-12 mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg" id="confirmButton" disabled>
+                            <i class="fas fa-check-circle me-2"></i> Confirm Booking
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const parkingLotSelect = document.getElementById('parking_lot_id');
+        const vehicleSelect = document.getElementById('vehicle_id');
+        const startTimeInput = document.getElementById('start_time');
+        const endTimeInput = document.getElementById('end_time');
+        const spaceSelect = document.getElementById('parking_space_id');
+        const confirmButton = document.getElementById('confirmButton');
+        
+        // Set minimum date/time to current
+        const now = new Date();
+        const nowFormatted = now.toISOString().slice(0, 16);
+        startTimeInput.min = nowFormatted;
+        endTimeInput.min = nowFormatted;
+        
+        // Add event listeners
+        parkingLotSelect.addEventListener('change', updateSummary);
+        vehicleSelect.addEventListener('change', updateSummary);
+        startTimeInput.addEventListener('change', function() {
+            // Set end time minimum to start time
+            endTimeInput.min = startTimeInput.value;
+            // If end time is before start time, reset it
+            if (endTimeInput.value < startTimeInput.value) {
+                endTimeInput.value = startTimeInput.value;
+            }
+            updateSummary();
+        });
+        endTimeInput.addEventListener('change', updateSummary);
+        spaceSelect.addEventListener('change', updateSummary);
+        
+        function updateSummary() {
+            // Update summary information
+            const lotSelect = parkingLotSelect.options[parkingLotSelect.selectedIndex];
+            const vehicleSelect = document.getElementById('vehicle_id');
+            const vehicle = vehicleSelect.options[vehicleSelect.selectedIndex];
+            const space = spaceSelect.options[spaceSelect.selectedIndex];
+            
+            document.getElementById('summary_location').textContent = lotSelect.value ? lotSelect.text : 'Not selected';
+            document.getElementById('summary_vehicle').textContent = vehicle.value ? vehicle.text : 'Not selected';
+            document.getElementById('summary_space').textContent = space.value ? space.text : 'Not selected';
+            
+            const startTime = startTimeInput.value ? new Date(startTimeInput.value) : null;
+            const endTime = endTimeInput.value ? new Date(endTimeInput.value) : null;
+            
+            document.getElementById('summary_start').textContent = startTime ? startTime.toLocaleString() : 'Not selected';
+            document.getElementById('summary_end').textContent = endTime ? endTime.toLocaleString() : 'Not selected';
+            
+            // Calculate duration and total
+            if (startTime && endTime && endTime > startTime) {
+                const durationMs = endTime - startTime;
+                const durationHours = durationMs / (1000 * 60 * 60);
+                document.getElementById('summary_duration').textContent = durationHours.toFixed(2) + ' hours';
+                
+                const hourlyRate = lotSelect.dataset.rate || 0;
+                document.getElementById('summary_rate').textContent = hourlyRate;
+                const total = durationHours * hourlyRate;
+                document.getElementById('summary_total').textContent = total.toFixed(2);
+            } else {
+                document.getElementById('summary_duration').textContent = '0 hours';
+                document.getElementById('summary_total').textContent = '0.00';
+            }
+            
+            checkAvailability();
+        }
+        
+        function checkAvailability() {
+            const lotId = parkingLotSelect.value;
+            const vehicle = vehicleSelect.options[vehicleSelect.selectedIndex];
+            const vehicleType = vehicle ? vehicle.dataset.type : '';
+            const startTime = startTimeInput.value;
+            const endTime = endTimeInput.value;
+            
+            // Reset space select
+            spaceSelect.innerHTML = '<option value="">Select a parking space</option>';
+            spaceSelect.disabled = true;
+            confirmButton.disabled = true;
+            
+            if (!lotId || !vehicleType || !startTime || !endTime) {
+                return;
+            }
+            
+            // Fetch available spaces via AJAX
+            fetch(`/api/parking-spaces?lot_id=${lotId}&vehicle_type=${vehicleType}&start_time=${startTime}&end_time=${endTime}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error(data.error);
+                        return;
+                    }
+                    
+                    if (data.spaces && data.spaces.length > 0) {
+                        data.spaces.forEach(space => {
+                            const option = document.createElement('option');
+                            option.value = space.id;
+                            option.textContent = `Space ${space.space_number}`;
+                            spaceSelect.appendChild(option);
+                        });
+                        spaceSelect.disabled = false;
+                    } else {
+                        const option = document.createElement('option');
+                        option.value = "";
+                        option.textContent = "No spaces available for this time period";
+                        spaceSelect.appendChild(option);
+                    }
+                })
+                .catch(error => console.error('Error fetching parking spaces:', error));
+        }
+        
+        // Validate form before submission
+        document.getElementById('bookingForm').addEventListener('change', function() {
+            const isFormValid = 
+                parkingLotSelect.value && 
+                vehicleSelect.value && 
+                startTimeInput.value && 
+                endTimeInput.value && 
+                spaceSelect.value;
+                
+            confirmButton.disabled = !isFormValid;
+        });
+    });
+</script>
+{% endblock %}
